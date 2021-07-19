@@ -28,8 +28,8 @@ pub fn verify_hash(hash: &str, passwd: &str) -> Result<bool, ServiceError> {
     )
 }
 
-pub fn is_admin(id: Identity) -> Result<bool, ServiceError> {
-    if let None = id.identity() {
+pub fn is_admin(id: &Identity) -> Result<bool, ServiceError> {
+    if id.identity().is_none() {
         return Err(ServiceError::Unauthorized);
     }
     match serde_json::from_str::<SlimUser>(&id.identity().unwrap()) {
@@ -44,4 +44,16 @@ pub fn is_admin(id: Identity) -> Result<bool, ServiceError> {
         Err(_) => return Err(ServiceError::Unauthorized),
     };
     Ok(true)
+}
+
+pub fn get_logged_user(id: &Identity) -> Result<SlimUser, ServiceError> {
+    if let Some(u) = id.identity() {
+        if let Ok(v) = serde_json::from_str::<SlimUser>(&u) {
+            Ok(v)
+        } else {
+            Err(ServiceError::InternalServerError)
+        }
+    } else {
+        Err(ServiceError::Unauthorized)
+    }
 }

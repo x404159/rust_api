@@ -9,10 +9,7 @@ pub type Pool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
 pub fn create_connection_pool() -> Pool {
     dotenv::dotenv().ok();
-    std::env::set_var(
-        "RUST_LOG",
-        "simple-auth-server=debug,actix_web=info,actix_server=info",
-    );
+    std::env::set_var("RUST_LOG", "actix_web=info,actix_server=info");
     env_logger::init();
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set.");
 

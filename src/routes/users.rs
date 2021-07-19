@@ -1,9 +1,9 @@
-use crate::db::Pool;
 use crate::errors::ServiceError;
 use crate::models::user::SlimUser;
+use crate::{db::Pool, utils::is_admin};
 use actix_identity::Identity;
 use actix_web::{error::BlockingError, web, HttpResponse};
-use diesel::RunQueryDsl;
+use diesel::{EqAll, QueryDsl, RunQueryDsl};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -30,7 +30,7 @@ pub async fn post_user(
 }
 
 pub async fn get_users(id: Identity, pool: web::Data<Pool>) -> Result<HttpResponse, ServiceError> {
-    let _ = crate::utils::is_admin(id)?;
+    let _ = crate::utils::is_admin(&id)?;
     let res = web::block(move || get_all_users(pool)).await;
     match res {
         Ok(user) => Ok(HttpResponse::Ok().json(&user)),
@@ -39,6 +39,48 @@ pub async fn get_users(id: Identity, pool: web::Data<Pool>) -> Result<HttpRespon
             BlockingError::Canceled => Err(ServiceError::InternalServerError),
         },
     }
+}
+
+pub async fn change_account_type(
+    id: Identity,
+    user_id: web::Path<String>,
+    pool: web::Data<Pool>,
+) -> Result<HttpResponse, ServiceError> {
+    let _ = is_admin(&id)?;
+    let user_id = match user_id.into_inner().parse::<i64>() {
+        Ok(v) => v,
+        Err(_) => return Err(ServiceError::BadRequest("invalid user id".to_owned())),
+    };
+    let res = web::block(move || change_account(user_id, pool)).await;
+
+    match res {
+        Ok(s) => Ok(HttpResponse::Ok().json(serde_json::json!({ "msg": s }))),
+        Err(e) => match e {
+            BlockingError::Error(service_err) => Err(service_err),
+            BlockingError::Canceled => Err(ServiceError::InternalServerError),
+        },
+    }
+}
+
+fn change_account(user_id: i64, pool: web::Data<Pool>) -> Result<String, ServiceError> {
+    use crate::schema::users::dsl::{clearance, users};
+    let conn = &pool.get().unwrap();
+
+    let mut return_string = String::new();
+    let target = users.find(user_id);
+    let current_clearance = target.select(clearance).get_result::<bool>(conn)?;
+    if current_clearance {
+        return_string.push_str("change account type from admin to normal user");
+        let _ = diesel::update(target)
+            .set(clearance.eq_all(false))
+            .execute(conn)?;
+    } else {
+        return_string.push_str("change account type from normal user to admin");
+        let _ = diesel::update(target)
+            .set(clearance.eq_all(true))
+            .execute(conn)?;
+    }
+    Ok(return_string)
 }
 
 fn get_all_users(pool: web::Data<Pool>) -> Result<Vec<SlimUser>, ServiceError> {

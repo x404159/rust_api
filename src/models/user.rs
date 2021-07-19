@@ -1,5 +1,26 @@
 use super::super::schema::*;
+use diesel::Queryable;
 use serde::{Deserialize, Serialize};
+
+#[derive(AsChangeset, Serialize, Deserialize, Debug)]
+#[table_name = "users"]
+pub struct UserChange {
+    pub name: Option<String>,
+    pub email: Option<String>,
+    pub password: Option<String>,
+}
+
+impl Queryable<users::SqlType, diesel::pg::Pg> for UserChange {
+    type Row = (i64, String, String, String, bool, chrono::NaiveDateTime);
+
+    fn build(row: Self::Row) -> Self {
+        Self {
+            name: Some(row.1),
+            email: Some(row.2),
+            password: Some("sensitive content".to_owned()),
+        }
+    }
+}
 
 #[derive(Queryable, Serialize, Debug)]
 pub struct User {
