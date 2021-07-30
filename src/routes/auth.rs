@@ -60,7 +60,7 @@ pub async fn login(
 }
 
 pub async fn get_me(logged_user: LoggedUser) -> HttpResponse {
-    HttpResponse::Ok().json(logged_user)
+    HttpResponse::Ok().json(serde_json::json!({ "email": logged_user.email}))
 }
 
 fn query(user_data: AuthData, pool: web::Data<Pool>) -> Result<SlimUser, ServiceError> {
