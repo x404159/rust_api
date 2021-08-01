@@ -1,17 +1,22 @@
 use actix_identity::Identity;
-use actix_web::{error::BlockingError, web, Error, FromRequest, HttpRequest, HttpResponse};
+use actix_web::{
+    error::BlockingError,
+    web::{self, ServiceConfig},
+    Error, FromRequest, HttpRequest, HttpResponse,
+};
 use diesel::prelude::*;
 use futures::future::{err, ok, Ready};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::db::Pool;
+use crate::routes::auth;
 use crate::utils::verify_hash;
 use crate::{errors::ServiceError, models::user::SlimUser};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct AuthData {
-    email: String,
-    password: String,
+    pub email: String,
+    pub password: String,
 }
 
 type LoggedUser = SlimUser;
@@ -34,11 +39,24 @@ impl FromRequest for LoggedUser {
     }
 }
 
+//routes for /auth
+pub fn auth_route_config(cfg: &mut ServiceConfig) {
+    cfg.service(
+        web::resource("/auth")
+            .route(web::get().to(auth::get_me))
+            .route(web::post().to(auth::login))
+            .route(web::delete().to(auth::logout)),
+    );
+}
+
+//route handles
+//DELETE /auth
 pub async fn logout(id: Identity) -> HttpResponse {
     id.forget();
     HttpResponse::Ok().finish()
 }
 
+//POST /auth
 pub async fn login(
     user_data: web::Json<AuthData>,
     id: Identity,
@@ -59,10 +77,12 @@ pub async fn login(
     }
 }
 
+//GET /auth
 pub async fn get_me(logged_user: LoggedUser) -> HttpResponse {
     HttpResponse::Ok().json(serde_json::json!({ "email": logged_user.email}))
 }
 
+//route handles helper function
 fn query(user_data: AuthData, pool: web::Data<Pool>) -> Result<SlimUser, ServiceError> {
     use crate::models::user::User;
     use crate::schema::users::dsl::{email, users};

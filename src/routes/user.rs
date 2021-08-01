@@ -1,11 +1,15 @@
 use actix_identity::Identity;
 use actix_web::error::BlockingError;
-use actix_web::{web, HttpResponse};
+use actix_web::{
+    web::{self, ServiceConfig},
+    HttpResponse,
+};
 use diesel::prelude::*;
 
 use crate::db::Pool;
 use crate::errors::ServiceError;
 use crate::models::user::{SlimUser, User, UserChange};
+use crate::routes::user;
 use crate::utils::{get_logged_user, hash_password};
 
 pub enum FindBy {
@@ -13,6 +17,19 @@ pub enum FindBy {
     Id(i64),
 }
 
+//routes for /user
+pub fn user_route_config(cfg: &mut ServiceConfig) {
+    cfg.service(
+        web::resource("/user")
+            .route(web::get().to(user::get_me))
+            .route(web::patch().to(user::update_user))
+            .route(web::delete().to(user::remove_account)),
+    )
+    .route("user/{id}", web::get().to(user::get_user_by_id));
+}
+
+//route handlers
+//GET /user
 pub async fn get_me(id: Identity, pool: web::Data<Pool>) -> Result<HttpResponse, ServiceError> {
     let user = get_logged_user(&id)?;
     let res = web::block(|| find_by(FindBy::Email(user.email), pool)).await;
@@ -28,6 +45,7 @@ pub async fn get_me(id: Identity, pool: web::Data<Pool>) -> Result<HttpResponse,
     }
 }
 
+//GET /user/{id}
 pub async fn get_user_by_id(
     id: web::Path<String>,
     pool: web::Data<Pool>,
@@ -49,6 +67,7 @@ pub async fn get_user_by_id(
     }
 }
 
+// PATCH /user
 pub async fn update_user(
     id: Identity,
     updates: web::Json<UserChange>,
@@ -71,6 +90,7 @@ pub async fn update_user(
     }
 }
 
+//DELETE /user
 pub async fn remove_account(
     id: Identity,
     pool: web::Data<Pool>,
@@ -96,6 +116,7 @@ pub async fn remove_account(
     }
 }
 
+//route handler helpers
 fn delete_account(user_email: String, pool: web::Data<Pool>) -> Result<bool, ServiceError> {
     use crate::schema::users::dsl::{email, users};
     let conn = &pool.get().unwrap();

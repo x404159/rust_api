@@ -1,8 +1,14 @@
 use crate::errors::ServiceError;
 use crate::models::user::SlimUser;
+use crate::routes::users;
 use crate::{db::Pool, utils::is_admin};
+
 use actix_identity::Identity;
-use actix_web::{error::BlockingError, web, HttpResponse};
+use actix_web::{
+    error::BlockingError,
+    web::{self, ServiceConfig},
+    HttpResponse,
+};
 use diesel::{EqAll, QueryDsl, RunQueryDsl};
 use serde::Deserialize;
 
@@ -13,6 +19,18 @@ pub struct UserData {
     password: String,
 }
 
+//routes
+pub fn users_route_config(cfg: &mut ServiceConfig) {
+    cfg.service(
+        web::resource("/users")
+            .route(web::post().to(users::post_user))
+            .route(web::get().to(users::get_users)),
+    )
+    .route("/users/{id}", web::patch().to(users::change_account_type));
+}
+
+//route handles
+//POST /users
 pub async fn post_user(
     user_data: web::Json<UserData>,
     pool: web::Data<Pool>,
@@ -29,6 +47,7 @@ pub async fn post_user(
     }
 }
 
+//GET /users
 pub async fn get_users(id: Identity, pool: web::Data<Pool>) -> Result<HttpResponse, ServiceError> {
     let _ = crate::utils::is_admin(&id)?;
     let res = web::block(move || get_all_users(pool)).await;
@@ -41,6 +60,7 @@ pub async fn get_users(id: Identity, pool: web::Data<Pool>) -> Result<HttpRespon
     }
 }
 
+//PATCH /users/{id}
 pub async fn change_account_type(
     id: Identity,
     user_id: web::Path<String>,
@@ -62,6 +82,7 @@ pub async fn change_account_type(
     }
 }
 
+//route handles helper function
 fn change_account(user_id: i64, pool: web::Data<Pool>) -> Result<String, ServiceError> {
     use crate::schema::users::dsl::{clearance, users};
     let conn = &pool.get().unwrap();

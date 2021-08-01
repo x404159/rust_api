@@ -6,9 +6,14 @@ use server::{
     utils,
 };
 
+#[cfg(test)]
+mod tests;
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let address = "127.0.0.1:8000";
+    std::env::set_var("RUST_LOG", "actix_web=info,actix_server=info");
+    env_logger::init();
     let conn_pool = server::db::create_connection_pool();
     let domain = std::env::var("DOMAIN").unwrap_or_else(|_| "localhost".to_owned());
     HttpServer::new(move || {
@@ -26,25 +31,9 @@ async fn main() -> std::io::Result<()> {
             ))
             //limit the maximum amount of data that server will except
             .data(web::JsonConfig::default().limit(4096))
-            .service(
-                web::resource("/users")
-                    .route(web::post().to(users::post_user))
-                    .route(web::get().to(users::get_users)),
-            )
-            .route("/users/{id}", web::patch().to(users::change_account_type))
-            .service(
-                web::resource("/user")
-                    .route(web::get().to(user::get_me))
-                    .route(web::patch().to(user::update_user))
-                    .route(web::delete().to(user::remove_account)),
-            )
-            .route("user/{id}", web::get().to(user::get_user_by_id))
-            .service(
-                web::resource("/auth")
-                    .route(web::get().to(auth::get_me))
-                    .route(web::post().to(auth::login))
-                    .route(web::delete().to(auth::logout)),
-            )
+            .configure(users::users_route_config)
+            .configure(user::user_route_config)
+            .configure(auth::auth_route_config)
             .default_service(web::route().to(not_found::handle_404))
     })
     .bind(address)?

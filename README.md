@@ -18,7 +18,11 @@ it uses:
 - users can change there own email, password and name
 - auto logout after deletion of account or attempting to change password
 
-### note
+### added
+
+- some tests as an example of tests with actix-web
+
+#### note
 
 this is my first work in actix-web and diesel on this scale.
 so i don't know much of the best practices.

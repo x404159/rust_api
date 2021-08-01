@@ -33,7 +33,7 @@ pub struct User {
     pub created_at: chrono::NaiveDateTime,
 }
 
-#[derive(Deserialize, Insertable)]
+#[derive(Deserialize, Insertable, Serialize)]
 #[table_name = "users"]
 pub struct UserInsert {
     pub name: String,
