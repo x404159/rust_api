@@ -71,3 +71,62 @@ impl From<User> for SlimUser {
         }
     }
 }
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct AuthData {
+    pub email: String,
+    pub password: String,
+}
+
+pub enum FindBy {
+    Email(String),
+    Id(i64),
+}
+
+#[derive(Deserialize)]
+pub struct UserData {
+    pub name: String,
+    pub email: String,
+    pub password: String,
+}
+
+use crate::errors::ServiceError;
+use actix_identity::Identity;
+use actix_web::{Error, FromRequest, HttpRequest};
+use futures::future::{err, ok, Ready};
+
+//impl fromrequest so that we can extract LoggedUser from req: HttpRequest as Json
+impl FromRequest for SlimUser {
+    type Config = ();
+    type Error = Error;
+    type Future = Ready<Result<SlimUser, Error>>;
+
+    fn from_request(req: &HttpRequest, payload: &mut actix_web::dev::Payload) -> Self::Future {
+        if let Ok(identity) = Identity::from_request(req, payload).into_inner() {
+            if let Some(user_json) = identity.identity() {
+                if let Ok(user) = serde_json::from_str(&user_json) {
+                    return ok(user);
+                }
+            }
+        }
+        err(ServiceError::Unauthorized.into())
+    }
+}
+
+//testing raw sql
+
+use diesel::sql_types::*;
+
+#[derive(QueryableByName, Deserialize, Serialize)]
+pub struct RawUser {
+    #[sql_type = "BigSerial"]
+    id: i64,
+    #[sql_type = "VarChar"]
+    name: String,
+    #[sql_type = "VarChar"]
+    email: String,
+    #[sql_type = "Timestamp"]
+    created_at: chrono::NaiveDateTime,
+    #[sql_type = "Text"]
+    about_email: String,
+}

@@ -1742,6 +1742,7 @@ version = "0.1.0"
 dependencies = [
  "actix-identity",
  "actix-rt 2.2.0",
+ "actix-service",
  "actix-web",
  "chrono",
  "derive_more",

@@ -2,6 +2,7 @@ use actix_identity::{CookieIdentityPolicy, IdentityService};
 use actix_web::{middleware, web, App, HttpServer};
 
 use server::{
+    middlewares,
     routes::{auth, not_found, user, users},
     utils,
 };
@@ -11,7 +12,7 @@ mod tests;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let address = "127.0.0.1:8000";
+    let address = "0.0.0.0:8000";
     std::env::set_var("RUST_LOG", "actix_web=info,actix_server=info");
     env_logger::init();
     let conn_pool = server::db::create_connection_pool();
@@ -21,6 +22,7 @@ async fn main() -> std::io::Result<()> {
             .data(conn_pool.clone())
             //enable logger middleware
             .wrap(middleware::Logger::default())
+            .wrap(middlewares::auth::Auth)
             .wrap(IdentityService::new(
                 CookieIdentityPolicy::new(utils::SECRET_KEY.as_bytes())
                     .name("auth")

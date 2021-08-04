@@ -1,6 +1,6 @@
-use actix_identity::Identity;
+use actix_web::HttpRequest;
 
-use crate::{errors::ServiceError, models::user::SlimUser};
+use crate::errors::ServiceError;
 
 lazy_static::lazy_static! {
     pub static ref SECRET_KEY: String = std::env::var("SECRET_KEY").unwrap_or_else(|_| "sct07".repeat(8));
@@ -28,32 +28,14 @@ pub fn verify_hash(hash: &str, passwd: &str) -> Result<bool, ServiceError> {
     )
 }
 
-pub fn is_admin(id: &Identity) -> Result<bool, ServiceError> {
-    if id.identity().is_none() {
-        return Err(ServiceError::Unauthorized);
+pub fn parse_request(req: HttpRequest) -> (String, String) {
+    let mut email = String::new();
+    let mut clearance = String::new();
+    if let Some(e) = req.headers().get("user_email") {
+        email = e.to_str().unwrap().to_owned();
     }
-    match serde_json::from_str::<SlimUser>(&id.identity().unwrap()) {
-        Ok(u) => {
-            //checking for admin previleges
-            if !u.clearance {
-                return Err(ServiceError::BadRequest(
-                    "only admins can access this route".to_owned(),
-                ));
-            }
-        }
-        Err(_) => return Err(ServiceError::Unauthorized),
-    };
-    Ok(true)
-}
-
-pub fn get_logged_user(id: &Identity) -> Result<SlimUser, ServiceError> {
-    if let Some(u) = id.identity() {
-        if let Ok(v) = serde_json::from_str::<SlimUser>(&u) {
-            Ok(v)
-        } else {
-            Err(ServiceError::InternalServerError)
-        }
-    } else {
-        Err(ServiceError::Unauthorized)
+    if let Some(c) = req.headers().get("clearance") {
+        clearance = c.to_str().unwrap().to_owned();
     }
+    (email, clearance)
 }

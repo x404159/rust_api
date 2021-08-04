@@ -12,6 +12,8 @@ pub enum ServiceError {
     BadRequest(String),
     #[display(fmt = "Unauthorized")]
     Unauthorized,
+    #[display(fmt = "NotFound")]
+    NotFound,
 }
 
 //for actix_web error
@@ -22,6 +24,7 @@ impl ResponseError for ServiceError {
                 .json("Internal Server Error, please try again later."),
             ServiceError::BadRequest(ref msg) => HttpResponse::BadRequest().json(msg),
             ServiceError::Unauthorized => HttpResponse::Unauthorized().json("Unauthorized"),
+            ServiceError::NotFound => HttpResponse::NotFound().json("NOT FOUND"),
         }
     }
 }

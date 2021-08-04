@@ -1,6 +1,6 @@
 use super::*;
 use actix_web::{http::StatusCode, test, App};
-use server::models;
+use server::{controllers, models};
 
 #[actix_rt::test]
 async fn test_create_user_at_users_post_route() {
@@ -13,7 +13,7 @@ async fn test_create_user_at_users_post_route() {
     let mut app = test::init_service(
         App::new()
             .data(pool.clone())
-            .route("/users", web::post().to(users::post_user)),
+            .route("/users", web::post().to(controllers::users::post_user)),
     )
     .await;
     //test request
@@ -34,7 +34,7 @@ async fn test_create_user_at_users_post_route() {
 #[actix_rt::test]
 async fn test_user_login_at_auth_post_route() {
     let pool = server::db::create_connection_pool();
-    let auth_data = auth::AuthData {
+    let auth_data = models::user::AuthData {
         email: "test@some_user.com".to_owned(),
         password: "test_password123".to_owned(),
     };
@@ -50,7 +50,7 @@ async fn test_user_login_at_auth_post_route() {
                     .max_age(86400)
                     .secure(false),
             ))
-            .route("/auth", web::post().to(auth::login)),
+            .route("/auth", web::post().to(controllers::auth::login)),
     )
     .await;
     let req = test::TestRequest::post()
