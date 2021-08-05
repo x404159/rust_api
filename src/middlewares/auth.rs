@@ -1,4 +1,3 @@
-use actix_identity::RequestIdentity;
 use actix_service::{Service, Transform};
 use actix_web::{
     dev::{ServiceRequest, ServiceResponse},
@@ -12,7 +11,7 @@ use futures::{
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-use crate::models::user::SlimUser;
+use crate::utils::decode_jwt;
 
 pub struct Auth;
 
@@ -61,20 +60,29 @@ where
         {
             token_verified = true;
         }
+        if let Some(t) = req.headers_mut().get("AUTHORIZATION") {
+            if let Ok(token) = t.to_str() {
+                if token.starts_with("bearer") || token.starts_with("Bearer") {
+                    let token = token[6..].trim();
+                    if let Ok(data) = decode_jwt(token.to_owned()) {
+                        req.headers_mut().insert(
+                            header::HeaderName::from_static("user_email"),
+                            header::HeaderValue::from_str(&data.claims.email).unwrap(),
+                        );
+                        let user_type = if data.claims.clearance {
+                            "admin"
+                        } else {
+                            "non_admin"
+                        };
+                        req.headers_mut().insert(
+                            header::HeaderName::from_static("user_clearance"),
+                            header::HeaderValue::from_str(&user_type).unwrap(),
+                        );
 
-        if let Some(t) = req.get_identity() {
-            let user = serde_json::from_str::<SlimUser>(t.as_str()).unwrap();
-            req.headers_mut().insert(
-                header::HeaderName::from_static("user_email"),
-                header::HeaderValue::from_str(&user.email).unwrap(),
-            );
-            let user_type = if user.clearance { "admin" } else { "non_admin" };
-            req.headers_mut().insert(
-                header::HeaderName::from_static("user_clearance"),
-                header::HeaderValue::from_str(&user_type).unwrap(),
-            );
-
-            token_verified = true;
+                        token_verified = true;
+                    }
+                }
+            }
         }
 
         if token_verified {

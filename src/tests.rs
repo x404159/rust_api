@@ -1,6 +1,36 @@
 use super::*;
-use actix_web::{http::StatusCode, test, App};
+use actix_web::{
+    body::Body,
+    dev::ResponseBody,
+    http::{header, StatusCode},
+    test, App,
+};
+use serde::Deserialize;
 use server::{controllers, models};
+
+trait BodyTest {
+    fn as_str(&self) -> &str;
+}
+
+impl BodyTest for ResponseBody<Body> {
+    fn as_str(&self) -> &str {
+        match self {
+            ResponseBody::Body(ref b) => match b {
+                Body::Bytes(ref by) => std::str::from_utf8(&by).unwrap(),
+                _ => panic!(),
+            },
+            ResponseBody::Other(ref b) => match b {
+                Body::Bytes(by) => std::str::from_utf8(&by).unwrap(),
+                _ => panic!(),
+            },
+        }
+    }
+}
+
+#[derive(Deserialize)]
+struct Token {
+    token: String,
+}
 
 #[actix_rt::test]
 async fn test_create_user_at_users_post_route() {
@@ -27,7 +57,7 @@ async fn test_create_user_at_users_post_route() {
     //assert_eq!(resp, serde_json::json!({ "email": "test@some_user.com"}));
     assert_eq!(
         resp,
-        serde_json::json!("Key (email)=(test@some_user.com) already exists.")
+        serde_json::json!("BadRequest: Key (email)=(test@some_user.com) already exists.")
     );
 }
 
@@ -38,18 +68,9 @@ async fn test_user_login_at_auth_post_route() {
         email: "test@some_user.com".to_owned(),
         password: "test_password123".to_owned(),
     };
-    let domain = std::env::var("DOMAIN").unwrap_or_else(|_| "localhost".to_owned());
     let mut app = test::init_service(
         App::new()
             .data(pool.clone())
-            .wrap(IdentityService::new(
-                CookieIdentityPolicy::new(utils::SECRET_KEY.as_bytes())
-                    .name("auth")
-                    .path("/")
-                    .domain(domain.as_str())
-                    .max_age(86400)
-                    .secure(false),
-            ))
             .route("/auth", web::post().to(controllers::auth::login)),
     )
     .await;
@@ -58,6 +79,38 @@ async fn test_user_login_at_auth_post_route() {
         .uri("/auth")
         .to_request();
     let resp = test::call_service(&mut app, req).await;
-    dbg!(&resp.headers().get("set-cookie"));
+    assert_eq!(resp.status(), StatusCode::OK);
+}
+
+#[actix_rt::test]
+async fn test_user_get_route() {
+    let pool = server::db::create_connection_pool();
+    let auth_data = models::user::AuthData {
+        email: "test@some_user.com".to_owned(),
+        password: "test_password123".to_owned(),
+    };
+    let mut app = test::init_service(
+        App::new()
+            .data(pool.clone())
+            .wrap(middlewares::auth::Auth)
+            .route("/auth", web::post().to(controllers::auth::login))
+            .route("/user", web::get().to(controllers::user::get_me)),
+    )
+    .await;
+    let login_req = test::TestRequest::post()
+        .set_json(&auth_data)
+        .uri("/auth")
+        .to_request();
+    //we have to login to get the user auth cookie
+    let mut login_resp = test::call_service(&mut app, login_req).await;
+    let auth_token = serde_json::from_str::<Token>(login_resp.take_body().as_str()).unwrap();
+    let get_req = test::TestRequest::get()
+        .header(
+            header::AUTHORIZATION,
+            format!("Bearer {}", auth_token.token),
+        )
+        .uri("/user")
+        .to_request();
+    let resp = test::call_service(&mut app, get_req).await;
     assert_eq!(resp.status(), StatusCode::OK);
 }

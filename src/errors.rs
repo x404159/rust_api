@@ -1,7 +1,10 @@
 //custom errors
-use actix_web::{error::ResponseError, HttpResponse};
+use actix_web::{
+    dev::HttpResponseBuilder, error::ResponseError, http::header, http::StatusCode, HttpResponse,
+};
 use derive_more::Display;
 use diesel::result::{DatabaseErrorKind, Error as DBError};
+use jsonwebtoken::errors::Error as JWTError;
 use std::convert::From;
 
 #[derive(Debug, Display)]
@@ -14,17 +17,26 @@ pub enum ServiceError {
     Unauthorized,
     #[display(fmt = "NotFound")]
     NotFound,
+    #[display(fmt = "jsonwebtoken error")]
+    JsonWebTokenError,
 }
 
 //for actix_web error
 impl ResponseError for ServiceError {
     fn error_response(&self) -> HttpResponse {
-        match self {
-            ServiceError::InternalServerError => HttpResponse::InternalServerError()
-                .json("Internal Server Error, please try again later."),
-            ServiceError::BadRequest(ref msg) => HttpResponse::BadRequest().json(msg),
-            ServiceError::Unauthorized => HttpResponse::Unauthorized().json("Unauthorized"),
-            ServiceError::NotFound => HttpResponse::NotFound().json("NOT FOUND"),
+        HttpResponseBuilder::new(self.status_code())
+            .set_header(header::CONTENT_TYPE, "application/json")
+            .json(self.to_string())
+    }
+
+    fn status_code(&self) -> actix_web::http::StatusCode {
+        match *self {
+            Self::InternalServerError | Self::JsonWebTokenError => {
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
+            Self::BadRequest(_) => StatusCode::BAD_REQUEST,
+            Self::NotFound => StatusCode::NOT_FOUND,
+            Self::Unauthorized => StatusCode::UNAUTHORIZED,
         }
     }
 }
@@ -42,5 +54,11 @@ impl From<DBError> for ServiceError {
             }
             _ => ServiceError::InternalServerError,
         }
+    }
+}
+
+impl From<JWTError> for ServiceError {
+    fn from(_: JWTError) -> Self {
+        Self::JsonWebTokenError
     }
 }

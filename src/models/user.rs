@@ -90,27 +90,11 @@ pub struct UserData {
     pub password: String,
 }
 
-use crate::errors::ServiceError;
-use actix_identity::Identity;
-use actix_web::{Error, FromRequest, HttpRequest};
-use futures::future::{err, ok, Ready};
-
-//impl fromrequest so that we can extract LoggedUser from req: HttpRequest as Json
-impl FromRequest for SlimUser {
-    type Config = ();
-    type Error = Error;
-    type Future = Ready<Result<SlimUser, Error>>;
-
-    fn from_request(req: &HttpRequest, payload: &mut actix_web::dev::Payload) -> Self::Future {
-        if let Ok(identity) = Identity::from_request(req, payload).into_inner() {
-            if let Some(user_json) = identity.identity() {
-                if let Ok(user) = serde_json::from_str(&user_json) {
-                    return ok(user);
-                }
-            }
-        }
-        err(ServiceError::Unauthorized.into())
-    }
+#[derive(Serialize, Deserialize)]
+pub struct Claims {
+    pub email: String,
+    pub clearance: bool,
+    pub exp: usize,
 }
 
 //testing raw sql

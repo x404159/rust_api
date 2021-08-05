@@ -1,4 +1,3 @@
-use actix_identity::Identity;
 use actix_web::HttpRequest;
 use actix_web::{web, HttpResponse};
 
@@ -35,17 +34,12 @@ pub async fn get_user_by_id(
 
 // PATCH /user
 pub async fn update_user(
-    id: Identity,
     updates: web::Json<UserChange>,
     pool: web::Data<Pool>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ServiceError> {
     let (email, clearance) = parse_request(req);
     let updates = updates.into_inner();
-    if updates.password.is_some() {
-        //logging out since attempting to change password
-        id.forget();
-    }
     let clearance = if clearance == "admin" { true } else { false };
     let user = SlimUser { email, clearance };
     let changed = dbmethods::user_update(user, updates, pool)?;
@@ -55,7 +49,6 @@ pub async fn update_user(
 
 //DELETE /user
 pub async fn remove_account(
-    id: Identity,
     pool: web::Data<Pool>,
     req: HttpRequest,
 ) -> Result<HttpResponse, ServiceError> {
@@ -63,7 +56,6 @@ pub async fn remove_account(
     let b = dbmethods::delete_account(email, pool)?;
 
     if b {
-        id.forget();
         Ok(HttpResponse::Ok().json(serde_json::json!({ "msg": "account deleted successfully" })))
     } else {
         Ok(HttpResponse::Ok().json(serde_json::json!({ "msg": "could not delete account" })))

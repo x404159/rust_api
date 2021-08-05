@@ -6,7 +6,6 @@ use crate::controllers::auth;
 pub fn auth_route_config(cfg: &mut ServiceConfig) {
     cfg.service(
         web::resource("/auth")
-            .route(web::get().to(auth::get_me))
             .route(web::post().to(auth::login))
             .route(web::delete().to(auth::logout)),
     );

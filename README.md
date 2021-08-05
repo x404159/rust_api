@@ -7,11 +7,12 @@ it uses:
 - [actix-web](https://actix.rs/) as server
 - [rust-argon2](https://crates.io/crates/rust-argon2) for hashing password
 - r2d2 to create database connection pool
+- jsonwebtoken for authentication
 
 ## features
 
 - password hashing with rust-argon2
-- authentication with cookies (not the best) using actix-identity
+- ~~authentication with cookies (not the best) using actix-identity~~ replaced with jsonwebtoken auth
 - only admin user can change a normal user account to admin account
 - only admin can view all users (only emails)
 - users can delete there own account
