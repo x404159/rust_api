@@ -5,6 +5,7 @@ use actix_web::{
 use derive_more::Display;
 use diesel::result::{DatabaseErrorKind, Error as DBError};
 use jsonwebtoken::errors::Error as JWTError;
+use serde::Serialize;
 use std::convert::From;
 
 #[derive(Debug, Display)]
@@ -21,12 +22,19 @@ pub enum ServiceError {
     JsonWebTokenError,
 }
 
+#[derive(Serialize)]
+struct MyError {
+    msg: String,
+}
+
 //for actix_web error
 impl ResponseError for ServiceError {
     fn error_response(&self) -> HttpResponse {
         HttpResponseBuilder::new(self.status_code())
             .set_header(header::CONTENT_TYPE, "application/json")
-            .json(self.to_string())
+            .json(MyError {
+                msg: self.to_string(),
+            })
     }
 
     fn status_code(&self) -> actix_web::http::StatusCode {

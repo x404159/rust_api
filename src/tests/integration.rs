@@ -56,7 +56,7 @@ async fn test_create_user_at_users_post_route() {
     //assert_eq!(resp, serde_json::json!({ "email": "test@some_user.com"}));
     assert_eq!(
         resp,
-        serde_json::json!("BadRequest: Key (email)=(test@some_user.com) already exists.")
+        serde_json::json!({"msg": "BadRequest: Key (email)=(test@some_user.com) already exists."})
     );
 }
 
