@@ -19,7 +19,21 @@ it uses:
 - users can change there own email, password and name
 - auto logout after deletion of account or attempting to change password
 
-### added
+### routes
+
+| Method | Route       | body                      | Success Response                  | Description                                    |
+| ------ | ----------- | ------------------------- | --------------------------------- | ---------------------------------------------- |
+| POST   | /users      | `{name, email, password}` | `{ email }`                       | creation of user / register                    |
+| GET    | /users      | N/A                       | `{email, clearance}`              | get all the users (only for admins)            |
+| PATCH  | /users/{id} | `{ update_value_only }`   | `{email, name, password: hidden}` | update user with id (only for admins)          |
+| POST   | /auth       | `{ email, password }`     | `{ token }`                       | login                                          |
+| DELETE | /auth       | N/A                       | Statuscode 200                    | logout (sets the authorization token to blank) |
+| GET    | /user       | N/A                       | `{user_details}`                  | get logged user                                |
+| PATCH  | /user       | `{ update_value_only }`   | `{email, name, password: hidden}` | update logged user                             |
+| DELETE | /user       | N/A                       | `{ msg }`                         | delete logged user from database               |
+| GET    | /user/{id}  | N/A                       | `{email, id}`                     | get user by id (only for authorized users)     |
+
+#### added
 
 - some tests as an example of tests with actix-web
 
