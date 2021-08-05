@@ -1,12 +1,11 @@
-use super::*;
 use actix_web::{
     body::Body,
     dev::ResponseBody,
     http::{header, StatusCode},
-    test, App,
+    test, web, App,
 };
 use serde::Deserialize;
-use server::{controllers, models};
+use server::{controllers, middlewares, models};
 
 trait BodyTest {
     fn as_str(&self) -> &str;
@@ -35,7 +34,7 @@ struct Token {
 #[actix_rt::test]
 async fn test_create_user_at_users_post_route() {
     //connection pool
-    let pool = server::db::create_connection_pool();
+    let pool = server::db::db::create_connection_pool();
     //post req data
     let user_data =
         models::user::UserInsert::from_details("test", "test@some_user.com", "test_password123");
@@ -63,7 +62,7 @@ async fn test_create_user_at_users_post_route() {
 
 #[actix_rt::test]
 async fn test_user_login_at_auth_post_route() {
-    let pool = server::db::create_connection_pool();
+    let pool = server::db::db::create_connection_pool();
     let auth_data = models::user::AuthData {
         email: "test@some_user.com".to_owned(),
         password: "test_password123".to_owned(),
@@ -84,7 +83,7 @@ async fn test_user_login_at_auth_post_route() {
 
 #[actix_rt::test]
 async fn test_user_get_route() {
-    let pool = server::db::create_connection_pool();
+    let pool = server::db::db::create_connection_pool();
     let auth_data = models::user::AuthData {
         email: "test@some_user.com".to_owned(),
         password: "test_password123".to_owned(),

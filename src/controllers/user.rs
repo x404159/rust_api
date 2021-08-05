@@ -2,7 +2,7 @@ use actix_web::HttpRequest;
 use actix_web::{web, HttpResponse};
 
 use crate::{
-    db::Pool,
+    db::db::Pool,
     errors::ServiceError,
     models::{
         dbmethods,

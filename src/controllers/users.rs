@@ -1,7 +1,7 @@
 use actix_web::{web, HttpRequest, HttpResponse};
 
 use crate::{
-    db::Pool,
+    db::db::Pool,
     errors::ServiceError,
     models::{dbmethods, user::UserData},
     utils::parse_request,

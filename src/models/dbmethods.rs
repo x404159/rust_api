@@ -1,7 +1,7 @@
 use actix_web::web;
 use diesel::prelude::*;
 
-use crate::db::Pool;
+use crate::db::db::Pool;
 use crate::errors::ServiceError;
 use crate::models::user::{AuthData, FindBy, SlimUser, User, UserChange, UserData, UserInsert};
 use crate::utils::{hash_password, verify_hash};

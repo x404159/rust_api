@@ -13,7 +13,7 @@ async fn main() -> std::io::Result<()> {
     let address = "0.0.0.0:8000";
     std::env::set_var("RUST_LOG", "actix_web=info,actix_server=info");
     env_logger::init();
-    let conn_pool = server::db::create_connection_pool();
+    let conn_pool = server::db::db::create_connection_pool();
     HttpServer::new(move || {
         App::new()
             .data(conn_pool.clone())

@@ -1,7 +1,7 @@
 use actix_web::http::header;
 use actix_web::{web, HttpResponse};
 
-use crate::db::Pool;
+use crate::db::db::Pool;
 use crate::errors::ServiceError;
 use crate::models::{dbmethods::login_user, user::AuthData};
 use crate::utils;
